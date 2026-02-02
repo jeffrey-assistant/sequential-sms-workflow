@@ -1,0 +1,40 @@
+{
+  "description": "Test example for Sequential SMS n8n Workflow",
+  "testInput": {
+    "from": "+1234567890",
+    "to": "+0987654321",
+    "message": "Bonjour! 👋\nMerci pour votre message.\n\nNous allons traiter votre demande.\nUn conseiller vous contactera sous 24h.\n\nBonne journée! 😊"
+  },
+  "expectedOutput": {
+    "smsCount": 5,
+    "smsMessages": [
+      "Bonjour! 👋",
+      "Merci pour votre message.",
+      "Nous allons traiter votre demande.",
+      "Un conseiller vous contactera sous 24h.",
+      "Bonne journée! 😊"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Simple greeting",
+      "input": "Hello\nWorld",
+      "expectedLines": 2
+    },
+    {
+      "name": "With empty lines",
+      "input": "Line 1\n\nLine 2\n\n\nLine 3",
+      "expectedLines": 3
+    },
+    {
+      "name": "Unicode characters",
+      "input": "Héllo Wörld! 👋\nComment ça va?",
+      "expectedLines": 2
+    },
+    {
+      "name": "Full example",
+      "input": "Bonjour! 👋\nMerci pour votre message.\n\nNous allons traiter votre demande.\nUn conseiller vous contactera sous 24h.\n\nBonne journée! 😊",
+      "expectedLines": 5
+    }
+  ]
+}

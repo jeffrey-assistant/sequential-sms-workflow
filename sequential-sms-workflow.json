@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "instanceId": "sequential_sms_v1"
+  },
+  "name": "Sequential SMS Dispatch",
+  "nodes": [
+    {
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 200],
+      "parameters": {
+        "path": "sequential-sms",
+        "method": "POST",
+        "options": {}
+      }
+    },
+    {
+      "name": "Parse Lines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [300, 200],
+      "parameters": {
+        "jsCode": "// Parse AI output by line breaks\n// Remove empty lines\n\nconst items = $input.all();\n\nreturn items.map(item => {\n  const text = item.json.message || item.json.text || JSON.stringify(item.json);\n  \n  // Split by newlines and remove empty lines\n  const lines = text.split('\\n')\n    .map(line => line.trim())\n    .filter(line => line.length > 0);\n  \n  // Create separate items for each line\n  return lines.map((line, index) => ({\n    json: {\n      originalMessage: text,\n      lineNumber: index + 1,\n      lineContent: line,\n      totalLines: lines.length\n    }\n  }));\n}).flat();\n"
+      }
+    },
+    {
+      "name": "Loop Over Lines",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [500, 200],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "name": "Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [700, 200],
+      "parameters": {
+        "amount": 0.6,
+        "unit": "seconds"
+      }
+    },
+    {
+      "name": "Send SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "parameters": {
+        "from": "={{ $node['Webhook'].parameter['from'] || 'YOUR_TWILIO_NUMBER' }}",
+        "to": "={{ $node['Webhook'].parameter['to'] || 'RECIPIENT_NUMBER' }}",
+        "message": "={{ $json.lineContent }}",
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "YOUR_TWILIO_CREDENTIAL_ID",
+          "name": "Twilio Account"
+        }
+      }
+    },
+    {
+      "name": "Format Confirmation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1100, 200],
+      "parameters": {
+        "values": {
+          "json": {
+            "success": true,
+            "lineSent": "={{ $json.lineContent }}",
+            "lineNumber": "={{ $json.lineNumber }}",
+            "totalLines": "={{ $json.totalLines }}",
+            "timestamp": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Parse Lines", "type": "main", "index": 0 }]]
+    },
+    "Parse Lines": {
+      "main": [[{ "node": "Loop Over Lines", "type": "main", "index": 0 }]]
+    },
+    "Loop Over Lines": {
+      "main": [[{ "node": "Delay", "type": "main", "index": 0 }]]
+    },
+    "Delay": {
+      "main": [[{ "node": "Send SMS", "type": "main", "index": 0 }]]
+    },
+    "Send SMS": {
+      "main": [[{ "node": "Format Confirmation", "type": "main", "index": 0 }]]
+    }
+  }
+}
